@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/run.sh -- run bm against BareMetal Cloud and check every outcome.
 # Needs BM_API_KEY and a finished 'bm setup'. Uses one instance at a time and
-# cleans up after itself. About six minutes.
+# cleans up after itself. About eleven minutes.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 pass=0; fail=0; LOG=$(mktemp -d)
@@ -17,6 +17,15 @@ V="verified: the machine booted exactly the image built here"
 check hello      0 "Hello from a machine with no operating system." "$V" "cleaned up" -- ./bm run examples/hello.c
 check primes     0 "primes below 10000000: 664579" "correct: that is the known value" "$V" -- ./bm run examples/primes.c
 check https      0 "over verified TLS: HTTP 200" "page title: Example Domain" "$V" -- ./bm run --timeout 90 examples/https.c
+check machine    0 "processor:" "memory:" "When main() returns, this machine stops." "$V" -- ./bm run examples/machine.c
+check mandelbrot 0 "@@@@@@@@@@" "$V" -- ./bm run examples/mandelbrot.c
+check life       0 "correct: the glider moved exactly 10 squares" "$V" -- ./bm run examples/life.c
+check pi         0 "correct: the first 100 decimals match" "$V" -- ./bm run examples/pi.c
+check collatz    0 "correct: that is the known answer" "$V" -- ./bm run examples/collatz.c
+check threads    0 "correct: the total is n(n+1)/2" "$V" -- ./bm run examples/threads.c
+check database   0 "correct: the ratio is 1 for every planet" "$V" -- ./bm run examples/database.c
+check crypto     0 "matches the published test vector" "\"Pay Alice 90 dollars\"  rejected" "$V" -- ./bm run examples/crypto.c
+check github     0 "asked api.github.com about ReturnInfinity/BareMetal" "$V" -- ./bm run --timeout 90 examples/github.c
 check facts      0 "after 2026-01-01, plausible" "rdrand: works" "malloc 8 MiB: works" "facts ok" "$V" -- ./bm run tests/facts.c
 check multifile  0 "two files linked: 40 + 2 = 42" "$V" -- ./bm run tests/multi/main.c tests/multi/add.c
 check compile    1 "tests/bad.c:1:25: error" "build failed" -- ./bm run tests/bad.c

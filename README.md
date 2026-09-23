@@ -40,9 +40,12 @@ cd bm-run
 ./bm setup                 # once: builds the BareMetal toolchain in Docker
 export BM_API_KEY=...
 ./bm run examples/hello.c
-./bm run examples/primes.c     # checks its own answer
-./bm run examples/https.c      # fetches a web page over verified TLS
+./bm run examples/mandelbrot.c
+./bm run examples/database.c   # SQLite, with no operating system underneath
 ```
+
+There are twelve examples, from a one-line hello to SQLite, cryptography, threads
+and HTTPS. [examples/README.md](examples/README.md) lists them all.
 
 `bm setup` builds the toolchain from source, once. On an Apple M1 Pro, where
 Docker emulates x86-64, it took 19.5 minutes. After that, eight runs of `hello.c`
@@ -96,8 +99,8 @@ Linux, and worth knowing up front:
 - **No command-line arguments yet.** The cloud's create call takes no parameters, so
   put inputs in the source. Each different input is a different image.
 - **16 MiB of memory, one virtual CPU.** Large static arrays count against it.
-- **What does work:** `time()`, `malloc`, the usual C library, `RDRAND` for
-  randomness, and the network. libcurl, mbedTLS and the lwIP stack are linked
+- **What does work:** `time()`, `malloc`, the usual C library, threads,
+  `RDRAND` for randomness, SQLite and libsodium, and the network. libcurl, mbedTLS and the lwIP stack are linked
   into every program with a bundle of CA certificates, so `examples/https.c`
   fetches a page over TLS with the certificate checked. That run's whole machine
   lived 0.94 s, DNS and handshake included. The network stack prints a few
@@ -128,11 +131,11 @@ export BM_API_KEY=...
 ./tests/run.sh
 ```
 
-Runs twelve checks against the real cloud, one instance at a time, in about six
-minutes: the three examples; `time()`, `RDRAND` and an 8 MiB `malloc`; a
+Runs twenty-one checks against the real cloud, one instance at a time, in about
+eleven minutes: all twelve examples; `time()`, `RDRAND` and an 8 MiB `malloc`; a
 two-file program; a compile error; a missing file; a missing key; a program that
 never returns; a crash; output larger than the console keeps; and that nothing is
-left on the account afterwards. All twelve passed on 23 September 2026 against
+left on the account afterwards. All twenty-one passed on 23 September 2026 against
 BareMetal-App `bb230ef`, BareMetal-AppPort `585f6be` and BareMetal-Firecracker
 `a87744e`.
 

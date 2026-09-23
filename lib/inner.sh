@@ -111,7 +111,7 @@ run() {
 	# Read the console once right away: the boot log naming the image's sha256
 	# is at the top, and a program with a lot of output can push it out of the
 	# window the cloud keeps.
-	booted=$( { api instances logs "$INST" 2>/dev/null || true; } | { grep -o 'user-images/[0-9a-f]\{64\}' || true; } | head -1 | cut -d/ -f2)
+	booted=$( { api instances logs "$INST" 2>/dev/null || true; } | { grep -ao 'user-images/[0-9a-f]\{64\}' || true; } | head -1 | cut -d/ -f2)
 	while :; do
 		st=$(api instances show "$INST" 2>/dev/null | field status || true)
 		[ "$st" = STOPPED ] && break
@@ -122,15 +122,17 @@ run() {
 		sleep 2
 	done
 
-	# 4. read the console, and verify which image actually booted
+	# 4. read the console, and verify which image actually booted. Every grep on
+	#    it is -a: one stray NUL byte makes GNU grep call the file binary, and
+	#    grep -o then prints a warning instead of the match.
 	api instances logs "$INST" 2>/tmp/logs.err | tr -d '\r' > /tmp/console.txt || true
-	[ -n "$booted" ] || booted=$( { grep -o 'user-images/[0-9a-f]\{64\}' /tmp/console.txt || true; } | head -1 | cut -d/ -f2)
+	[ -n "$booted" ] || booted=$( { grep -ao 'user-images/[0-9a-f]\{64\}' /tmp/console.txt || true; } | head -1 | cut -d/ -f2)
 	local truncated=0; grep -q 'most recent portion' /tmp/logs.err 2>/dev/null && truncated=1
 	echo "----------------------------------------------------------------- output"
-	if grep -q 'Starting Payload' /tmp/console.txt; then
+	if grep -aq 'Starting Payload' /tmp/console.txt; then
 		awk '/Starting Payload/{on=1; getline; next} /^=+$/ && on {next} /Finished Payload/{exit} /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/ {next} on' /tmp/console.txt | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' 
 	else
-		{ grep -v -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T|^=+$|Finished Payload' /tmp/console.txt || true; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
+		{ grep -av -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T|^=+$|Finished Payload' /tmp/console.txt || true; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
 	fi
 	echo "-------------------------------------------------------------------------"
 	local guest; guest=$(python3 - /tmp/console.txt <<'PYEOF'
@@ -144,7 +146,7 @@ PYEOF
 	local rc=0
 	[ "$truncated" = 1 ] && say "the output was longer than the cloud keeps, so only its end is shown above (print less, or summarise)"
 	[ "$truncated" = 1 ] && guest=""
-	if grep -q 'Finished Payload' /tmp/console.txt; then
+	if grep -aq 'Finished Payload' /tmp/console.txt; then
 		say "the program ran to completion on BareMetal Cloud${guest:+ (VM alive $guest s)}"
 	elif [ "$TIMEDOUT" = 1 ]; then
 		say "the program did not return within $timeout s, so bm stopped it"; rc=3
