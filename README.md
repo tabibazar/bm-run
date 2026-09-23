@@ -58,6 +58,15 @@ measured:
 The machine itself is about one percent of the wait; the rest is building and the
 cloud API. On a Linux x86-64 host the build needs no emulation and should be faster.
 
+From a fresh `git clone` of this repository, following this README, the three
+examples had all run 20.6 minutes later, 18.8 of them the one-time setup.
+
+Builds are reproducible. The fresh clone's separate toolchain produced images with
+the same SHA-256 as the original: `hello.c` is `e3e3d84dbc9483b0...`, `primes.c`
+`83a94d9dec2395b9...` and `https.c` `d403ae0776d2b521...`. So when `bm` says the
+cloud booted the image with a given hash, anyone can rebuild the source and check
+that it is the same machine.
+
 ## Commands
 
 | command | what it does |

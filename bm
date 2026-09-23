@@ -16,7 +16,7 @@ inner() {
 case "${1:-help}" in
 	setup)
 		echo "bm: building the container image"
-		docker build --platform linux/amd64 -q -t "$BM_IMAGE" "$HERE" >/dev/null
+		BUILDX_GIT_INFO=false docker build --platform linux/amd64 -q -t "$BM_IMAGE" "$HERE" >/dev/null
 		inner setup ;;
 	run)
 		[ -n "${BM_API_KEY:-}" ] || die "BM_API_KEY is not set. Create a key under API KEYS at https://baremetal.returninfinity.com, then: export BM_API_KEY=..."
