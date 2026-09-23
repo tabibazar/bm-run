@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# bm -- run a program on a BareMetal unikernel in BareMetal Cloud, in one command.
+set -euo pipefail
+BM_IMAGE="${BM_IMAGE:-bm-run:latest}"
+BM_VOLUME="${BM_VOLUME:-bm-run-work}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+die() { printf 'bm: error: %s\n' "$*" >&2; exit 1; }
+command -v docker >/dev/null || die "Docker is required: https://docs.docker.com/get-docker/"
+docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker and try again."
+inner() {
+	docker run --rm -i --platform linux/amd64 \
+		-e BM_API_KEY="${BM_API_KEY:-}" -e BM_VOLUME="$BM_VOLUME" \
+		-v "$BM_VOLUME:/work" -v "$HERE/lib:/opt/bm:ro" -v "$PWD:/src:ro" \
+		"$BM_IMAGE" /opt/bm/inner.sh "$@"
+}
+case "${1:-help}" in
+	setup)
+		echo "bm: building the container image"
+		docker build --platform linux/amd64 -q -t "$BM_IMAGE" "$HERE" >/dev/null
+		inner setup ;;
+	run)
+		[ -n "${BM_API_KEY:-}" ] || die "BM_API_KEY is not set. Create a key under API KEYS at https://baremetal.returninfinity.com, then: export BM_API_KEY=..."
+		docker image inspect "$BM_IMAGE" >/dev/null 2>&1 || die "run 'bm setup' first"
+		start=$(date +%s); rc=0; inner "$@" || rc=$?
+		echo "bm: $(( $(date +%s) - start )) s wall clock, start to finish"; exit $rc ;;
+	ls|clean)
+		docker image inspect "$BM_IMAGE" >/dev/null 2>&1 || die "run 'bm setup' first"
+		inner "$@" ;;
+	*)
+		sed -n '2p' "$0" | sed 's/^# //'; echo; printf "usage:\n  bm setup                         build the toolchain in Docker (once)\n  bm run [--keep] [--timeout S] <program.c> [more.c ...]\n  bm ls                            list your instances and images\n  bm clean                         delete every instance and image named bm-*\n" ;;
+esac
