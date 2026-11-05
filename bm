@@ -9,7 +9,7 @@ command -v docker >/dev/null || die "Docker is required: https://docs.docker.com
 docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker and try again."
 inner() {
 	docker run --rm -i --platform linux/amd64 \
-		-e BM_API_KEY="${BM_API_KEY:-}" -e BM_VOLUME="$BM_VOLUME" \
+		-e BMC_API_KEY="${BMC_API_KEY:-${BM_API_KEY:-}}" -e BMC_URL="${BMC_URL:-}" -e BM_VOLUME="$BM_VOLUME" \
 		-v "$BM_VOLUME:/work" -v "$HERE/lib:/opt/bm:ro" -v "$PWD:/src:ro" \
 		"$BM_IMAGE" /opt/bm/inner.sh "$@"
 }
@@ -19,7 +19,7 @@ case "${1:-help}" in
 		BUILDX_GIT_INFO=false docker build --platform linux/amd64 -q -t "$BM_IMAGE" "$HERE" >/dev/null
 		inner setup ;;
 	run)
-		[ -n "${BM_API_KEY:-}" ] || die "BM_API_KEY is not set. Create a key under API KEYS at https://baremetal.returninfinity.com, then: export BM_API_KEY=..."
+		[ -n "${BMC_API_KEY:-${BM_API_KEY:-}}" ] || die "BMC_API_KEY is not set. Create a key under API keys at https://baremetal.returninfinity.com, then: export BMC_API_KEY=bmc_..."
 		docker image inspect "$BM_IMAGE" >/dev/null 2>&1 || die "run 'bm setup' first"
 		start=$(date +%s); rc=0; inner "$@" || rc=$?
 		echo "bm: $(( $(date +%s) - start )) s wall clock, start to finish"; exit $rc ;;
@@ -27,5 +27,5 @@ case "${1:-help}" in
 		docker image inspect "$BM_IMAGE" >/dev/null 2>&1 || die "run 'bm setup' first"
 		inner "$@" ;;
 	*)
-		sed -n '2p' "$0" | sed 's/^# //'; echo; printf "usage:\n  bm setup                         build the toolchain in Docker (once)\n  bm run [--keep] [--timeout S] <program.c> [more.c ...]\n  bm ls                            list your instances and images\n  bm clean                         delete every instance and image named bm-*\n" ;;
+		sed -n '2p' "$0" | sed 's/^# //'; echo; printf "usage:\n  bm setup                         build the toolchain in Docker (once)\n  bm run [--args \"A B\"] [--ram MiB] [--timeout S] [--keep] <program.c> [more.c ...]\n  bm ls                            show your plan, VMs and images\n  bm clean                         delete every VM and image named bm-*\n" ;;
 esac

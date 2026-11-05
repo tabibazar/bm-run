@@ -6,7 +6,7 @@ Every one of these runs as it is. Try them in any order:
 ./bm run examples/hello.c
 ```
 
-Most finish in about half a second of the machine's life; the rest of the ~30 s is
+Most finish in about half a second of the machine's life; the rest of the wait is
 building and the cloud. Programs marked **checks itself** know the right answer and
 say `correct` or `WRONG`, so you can see the machine got it right.
 
@@ -31,6 +31,7 @@ say `correct` or `WRONG`, so you can see the machine got it right.
 | [primes.c](primes.c) | Counts the primes below ten million with a sieve. **Checks itself** against the known count, 664,579. |
 | [pi.c](pi.c) | The first 1,000 digits of pi, one at a time, using only integers. **Checks itself** against the known first 100. |
 | [collatz.c](collatz.c) | Tests the Collatz conjecture for every number below a million, and finds the longest chain. **Checks itself**: 837,799, with 525 numbers. |
+| [factor.c](factor.c) | Factors numbers into primes. Give it your own with `--args`: `./bm run --args "360 1000000007" examples/factor.c`. **Checks itself** by multiplying every factorisation back together. |
 | [threads.c](threads.c) | Four threads on one CPU split a big sum, and share a counter under a mutex. **Checks itself**: the total is n(n+1)/2 and no increment is lost. |
 
 ## Libraries that come built in
@@ -53,6 +54,6 @@ nothing extra.
 ## Writing your own
 
 Copy any of these and change it. A few things differ from Linux: output is the
-serial console, so print results rather than data; there are no command-line
-arguments, so put inputs in the source; and when `main` returns, the machine
-stops. The main [README](../README.md) has the details.
+serial console, so print results rather than data; command-line arguments come
+from `bm run --args "..."`, as `factor.c` shows; and when `main` returns, the
+machine stops. The main [README](../README.md) has the details.

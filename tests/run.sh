@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/run.sh -- run bm against BareMetal Cloud and check every outcome.
-# Needs BM_API_KEY and a finished 'bm setup'. Uses one instance at a time and
-# cleans up after itself. About eleven minutes.
+# Needs BMC_API_KEY and a finished 'bm setup'. Uses one instance at a time and
+# cleans up after itself. About eight minutes.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 pass=0; fail=0; LOG=$(mktemp -d)
@@ -13,10 +13,12 @@ check() {  # name expected-rc command... ; then patterns that must appear
 	for p in "${pats[@]}"; do grep -qF -- "$p" "$LOG/$name" || { ok=0; echo "    missing: $p"; }; done
 	if [ $ok = 1 ]; then pass=$((pass+1)); echo "PASS  $name"; else fail=$((fail+1)); echo "FAIL  $name (rc=$rc, want $want)"; sed 's/^/    | /' "$LOG/$name" | tail -15; fi
 }
-V="verified: the machine booted exactly the image built here"
+V="verified: BareMetal Cloud's own SHA-256 of the image this VM booted matches the one built here"
 check hello      0 "Hello from a machine with no operating system." "$V" "cleaned up" -- ./bm run examples/hello.c
 check primes     0 "primes below 10000000: 664579" "correct: that is the known value" "$V" -- ./bm run examples/primes.c
 check https      0 "over verified TLS: HTTP 200" "page title: Example Domain" "$V" -- ./bm run --timeout 90 examples/https.c
+check factor     0 "600851475143 = 71 x 839 x 1471 x 6857" "correct: every factorisation" "$V" -- ./bm run examples/factor.c
+check args       0 'argv[1] = "hello"' 'argv[3] = "42"' "with arguments: hello world 42" "$V" -- ./bm run --args "hello world 42" tests/args.c
 check machine    0 "processor:" "memory:" "When main() returns, this machine stops." "$V" -- ./bm run examples/machine.c
 check mandelbrot 0 "@@@@@@@@@@" "$V" -- ./bm run examples/mandelbrot.c
 check life       0 "correct: the glider moved exactly 10 squares" "$V" -- ./bm run examples/life.c
@@ -30,7 +32,8 @@ check facts      0 "after 2026-01-01, plausible" "rdrand: works" "malloc 8 MiB: 
 check multifile  0 "two files linked: 40 + 2 = 42" "$V" -- ./bm run tests/multi/main.c tests/multi/add.c
 check compile    1 "tests/bad.c:1:25: error" "build failed" -- ./bm run tests/bad.c
 check missing    1 "tests/nope.c not found" -- ./bm run tests/nope.c
-check nokey      1 "BM_API_KEY is not set" -- env BM_API_KEY= ./bm run examples/hello.c
+check nokey      1 "BMC_API_KEY is not set" -- env BMC_API_KEY= BM_API_KEY= ./bm run examples/hello.c
+check alphakey   1 "a key for the BareMetal Cloud alpha" -- env BMC_API_KEY=bmvps_not_a_real_key ./bm run examples/hello.c
 check timeout    3 "about to loop forever" "did not return within 20 s" "cleaned up" -- ./bm run --timeout 20 tests/forever.c
 check crash      4 "about to write through a null pointer" "Exception" "may have crashed" "cleaned up" -- ./bm run tests/crash.c
 check bigoutput  0 "END OF OUTPUT" "only its end is shown" "$V" -- ./bm run --timeout 300 tests/bigout.c
